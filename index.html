@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZapLoad — Free Video Downloader for YouTube TikTok Instagram</title>
+<meta name="description" content="ZapLoad is a free video downloader. Download YouTube, TikTok, Instagram, Facebook videos in HD quality. No signup required.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0A0E1A;color:#fff;font-family:'Segoe UI',sans-serif;min-height:100vh}
+.header{padding:20px 40px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1a2040}
+.logo-text{font-size:28px;font-weight:900;background:linear-gradient(90deg,#00B4FF,#9B59FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero{text-align:center;padding:60px 20px 40px}
+.hero h1{font-size:42px;font-weight:900;margin-bottom:16px;background:linear-gradient(90deg,#00B4FF,#9B59FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:#8892b0;font-size:18px;margin-bottom:40px}
+.downloader-box{max-width:700px;margin:0 auto;background:#0d1326;border:1px solid #1a2040;border-radius:16px;padding:32px}
+.input-row{display:flex;gap:12px;margin-bottom:20px}
+.url-input{flex:1;background:#0A0E1A;border:2px solid #1a2040;border-radius:10px;padding:14px 18px;color:#fff;font-size:16px;outline:none;transition:.3s}
+.url-input:focus{border-color:#00B4FF}
+.url-input::placeholder{color:#4a5580}
+.fetch-btn{background:linear-gradient(90deg,#00B4FF,#9B59FF);border:none;border-radius:10px;padding:14px 28px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.3s}
+.fetch-btn:hover{opacity:.85}
+.result-box{display:none;margin-top:20px;background:#0A0E1A;border-radius:12px;padding:20px}
+.file-info{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.file-icon{font-size:40px}
+.file-details h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.file-details p{color:#8892b0;font-size:14px}
+.quality-label{font-size:14px;color:#8892b0;margin-bottom:8px}
+.quality-select{width:100%;background:#0d1326;border:2px solid #1a2040;border-radius:8px;padding:12px;color:#fff;font-size:15px;outline:none;margin-bottom:16px;cursor:pointer}
+.download-btn{width:100%;background:linear-gradient(90deg,#00B4FF,#9B59FF);border:none;border-radius:10px;padding:16px;color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:.3s}
+.download-btn:hover{opacity:.85}
+.progress-bar{display:none;margin-top:16px;background:#1a2040;border-radius:99px;height:8px;overflow:hidden}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#00B4FF,#9B59FF);border-radius:99px;transition:width .3s}
+.error-box{display:none;margin-top:16px;background:#2d0a0a;border:1px solid #ff4444;border-radius:10px;padding:16px;color:#ff8888}
+.loading{display:none;text-align:center;padding:20px;color:#8892b0}
+.spinner{width:40px;height:40px;border:3px solid #1a2040;border-top:3px solid #00B4FF;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sites{text-align:center;padding:40px 20px;color:#8892b0}
+.sites h2{font-size:22px;color:#fff;margin-bottom:20px}
+.site-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.tag{background:#0d1326;border:1px solid #1a2040;border-radius:99px;padding:8px 18px;font-size:14px;color:#8892b0}
+.donate{text-align:center;padding:40px 20px;border-top:1px solid #1a2040}
+.donate h2{font-size:22px;margin-bottom:10px}
+.donate p{color:#8892b0;margin-bottom:20px}
+.donate-btn{background:linear-gradient(90deg,#ff6b6b,#ffa500);border:none;border-radius:10px;padding:14px 32px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
+.footer{text-align:center;padding:20px;color:#4a5580;font-size:13px;border-top:1px solid #1a2040}
+</style>
+</head>
+<body>
+<header class="header">
+  <span class="logo-text">⚡ ZapLoad</span>
+</header>
+<section class="hero">
+  <h1>Download Any Video Free</h1>
+  <p>YouTube • TikTok • Instagram • Facebook • Twitter • Reddit & 1000+ sites</p>
+</section>
+<main style="padding:0 20px 40px">
+  <div class="downloader-box">
+    <div class="input-row">
+      <input class="url-input" id="urlInput" type="text" placeholder="Paste video or file link here...">
+      <button class="fetch-btn" onclick="fetchInfo()">Get Info</button>
+    </div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Fetching video info...</p>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+    <div class="result-box" id="resultBox">
+      <div class="file-info">
+        <span class="file-icon" id="fileIcon">🎬</span>
+        <div class="file-details">
+          <h3 id="fileName">Video Title</h3>
+          <p id="fileSize">Size: calculating...</p>
+        </div>
+      </div>
+      <p class="quality-label">Select Quality:</p>
+      <select class="quality-select" id="qualitySelect"></select>
+      <button class="download-btn" onclick="startDownload()">⚡ Download Now</button>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+</main>
+<section class="sites">
+  <h2>Supported Sites</h2>
+  <div class="site-tags">
+    <span class="tag">YouTube</span><span class="tag">TikTok</span><span class="tag">Instagram</span>
+    <span class="tag">Facebook</span><span class="tag">Twitter/X</span><span class="tag">Reddit</span>
+    <span class="tag">Vimeo</span><span class="tag">Dailymotion</span><span class="tag">SoundCloud</span>
+    <span class="tag">Direct Links</span><span class="tag">1000+ more</span>
+  </div>
+</section>
+<section class="donate">
+  <h2>❤️ Support ZapLoad</h2>
+  <p>ZapLoad is free forever. If it helped you, consider buying us a coffee!</p>
+  <a class="donate-btn" href="https://ko-fi.com" target="_blank">☕ Support the Creator</a>
+</section>
+<footer class="footer">
+  <p>© 2025 ZapLoad — Free for everyone. Only download content you own or have rights to.</p>
+</footer>
+<script>
+const API = "https://sfarhanahmad-zapload.hf.space";
+
+async function fetchInfo() {
+  const url = document.getElementById("urlInput").value.trim();
+  if (!url) return alert("Please paste a link first!");
+  
+  document.getElementById("loading").style.display = "block";
+  document.getElementById("resultBox").style.display = "none";
+  document.getElementById("errorBox").style.display = "none";
+
+  try {
+    const res = await fetch(`${API}/info`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById("fileName").textContent = data.title || "File";
+    document.getElementById("fileSize").textContent = data.filesize ? `Size: ${(data.filesize/1024/1024).toFixed(1)} MB` : "Size: unknown";
+    document.getElementById("fileIcon").textContent = data.type === "video" ? "🎬" : data.type === "audio" ? "🎵" : "📁";
+
+    const select = document.getElementById("qualitySelect");
+    select.innerHTML = "";
+    if (data.formats && data.formats.length > 0) {
+      data.formats.forEach(f => {
+        const opt = document.createElement("option");
+        opt.value = f.format_id;
+        opt.textContent = f.label;
+        select.appendChild(opt);
+      });
+    } else {
+      const opt = document.createElement("option");
+      opt.value = "best";
+      opt.textContent = "Best Quality";
+      select.appendChild(opt);
+    }
+
+    document.getElementById("resultBox").style.display = "block";
+  } catch(e) {
+    const eb = document.getElementById("errorBox");
+    eb.textContent = "❌ " + (e.message || "Could not fetch info. Check the link and try again.");
+    eb.style.display = "block";
+  } finally {
+    document.getElementById("loading").style.display = "none";
+  }
+}
+
+async function startDownload() {
+  const url = document.getElementById("urlInput").value.trim();
+  const format = document.getElementById("qualitySelect").value;
+  document.getElementById("progressBar").style.display = "block";
+  document.getElementById("progressFill").style.width = "30%";
+  setTimeout(() => document.getElementById("progressFill").style.width = "70%", 1000);
+  window.location.href = `${API}/download?url=${encodeURIComponent(url)}&format_id=${format}`;
+  setTimeout(() => {
+    document.getElementById("progressFill").style.width = "100%";
+    setTimeout(() => document.getElementById("progressBar").style.display = "none", 1000);
+  }, 3000);
+}
+
+document.getElementById("urlInput").addEventListener("keypress", e => {
+  if (e.key === "Enter") fetchInfo();
+});
+</script>
+</body>
+</html>
