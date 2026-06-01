@@ -42,6 +42,7 @@ body{background:#0A0E1A;color:#fff;font-family:'Segoe UI',sans-serif;min-height:
 .spinner{width:36px;height:36px;border:3px solid #1a2040;border-top:3px solid #00B4FF;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .large-warning{display:none;margin-top:10px;background:#1a1a00;border:1px solid #ffaa00;border-radius:8px;padding:12px;color:#ffcc44;font-size:13px}
+.wake-banner{display:none;text-align:center;padding:8px;background:#0d1326;border:1px solid #1a2040;border-radius:8px;margin-bottom:12px;font-size:13px;color:#8892b0}
 .sites{text-align:center;padding:40px 20px;color:#8892b0}
 .sites h2{font-size:22px;color:#fff;margin-bottom:20px}
 .site-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
@@ -64,13 +65,14 @@ body{background:#0A0E1A;color:#fff;font-family:'Segoe UI',sans-serif;min-height:
 </section>
 <main style="padding:0 20px 40px">
   <div class="downloader-box">
+    <div class="wake-banner" id="wakeBanner">⏳ Server is waking up, please wait a moment...</div>
     <div class="input-row">
       <input class="url-input" id="urlInput" type="text" placeholder="Paste video or file link here...">
       <button class="fetch-btn" id="fetchBtn" onclick="fetchInfo()">Get Info</button>
     </div>
     <div class="loading" id="loading">
       <div class="spinner"></div>
-      <p>Fetching video info...</p>
+      <p id="loadingText">Fetching video info...</p>
     </div>
     <div class="error-box" id="errorBox"></div>
     <div class="result-box" id="resultBox">
@@ -110,41 +112,67 @@ body{background:#0A0E1A;color:#fff;font-family:'Segoe UI',sans-serif;min-height:
   <p>© 2025 ZapLoad — Free for everyone. Only download content you own or have rights to. <a href="/terms.html" style="color:#4a5580">Terms</a></p>
 </footer>
 <script>
-const API = "zapload-backend--sfarhanahmad982.replit.app";
+const API = "https://zapload-backend--sfarhanahmad982.replit.app";
 let currentData = null;
-
+let serverReady = false;
+ 
+// Wake up server when page loads
+async function wakeUp() {
+  try {
+    document.getElementById("wakeBanner").style.display = "block";
+    await fetch(`${API}/health`, {signal: AbortSignal.timeout(15000)});
+    serverReady = true;
+    document.getElementById("wakeBanner").style.display = "none";
+  } catch(e) {
+    document.getElementById("wakeBanner").textContent = "⚠️ Server is slow to respond. Please wait...";
+    setTimeout(wakeUp, 5000);
+  }
+}
+wakeUp();
+ 
 async function fetchInfo() {
   const url = document.getElementById("urlInput").value.trim();
   if (!url) { alert("Please paste a link first!"); return; }
-
+ 
   const btn = document.getElementById("fetchBtn");
   btn.disabled = true;
   btn.textContent = "Loading...";
-
+ 
   document.getElementById("loading").style.display = "block";
+  document.getElementById("loadingText").textContent = "Fetching video info...";
   document.getElementById("resultBox").style.display = "none";
   document.getElementById("errorBox").style.display = "none";
   document.getElementById("progressWrap").style.display = "none";
-
+ 
+  // If server not ready yet, wait for it
+  if (!serverReady) {
+    document.getElementById("loadingText").textContent = "Waiting for server to wake up...";
+    await new Promise(r => setTimeout(r, 3000));
+  }
+ 
   try {
     const res = await fetch(`${API}/info`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({url: url})
+      body: JSON.stringify({url: url}),
+      signal: AbortSignal.timeout(60000)
     });
-
-    const data = await res.json();
-
+ 
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      throw new Error("Server is waking up, please try again in a few seconds.");
+    }
+ 
     if (!res.ok) {
       throw new Error(data.detail || "Could not fetch info.");
     }
-
+ 
     currentData = data;
-
-    // Set title
     document.getElementById("fileName").textContent = data.title || "Unknown";
-
-    // Set size + uploader info
+ 
     let infoText = "";
     if (data.uploader) infoText += data.uploader + " • ";
     if (data.duration) {
@@ -154,19 +182,16 @@ async function fetchInfo() {
     }
     infoText += (data.filesize_human || "Size unknown");
     document.getElementById("fileInfo").textContent = infoText;
-
-    // Set thumbnail
+ 
     const thumbWrap = document.getElementById("thumbWrap");
     if (data.thumbnail) {
       thumbWrap.innerHTML = `<img class="thumb" src="${data.thumbnail}" onerror="this.parentElement.innerHTML='🎬'" alt="thumbnail">`;
     } else {
       thumbWrap.innerHTML = data.type === "direct" ? "📁" : "🎬";
     }
-
-    // Populate quality dropdown
+ 
     const select = document.getElementById("qualitySelect");
     select.innerHTML = "";
-
     if (data.formats && data.formats.length > 0) {
       data.formats.forEach(f => {
         const opt = document.createElement("option");
@@ -180,8 +205,7 @@ async function fetchInfo() {
       opt.textContent = "⭐ Best Quality";
       select.appendChild(opt);
     }
-
-    // Large file warning
+ 
     const warn = document.getElementById("largeWarning");
     if (data.large_warning) {
       warn.textContent = "⚠️ " + data.large_warning;
@@ -189,9 +213,9 @@ async function fetchInfo() {
     } else {
       warn.style.display = "none";
     }
-
+ 
     document.getElementById("resultBox").style.display = "block";
-
+ 
   } catch(e) {
     const eb = document.getElementById("errorBox");
     eb.textContent = "❌ " + (e.message || "Could not fetch info. Check the link and try again.");
@@ -202,25 +226,24 @@ async function fetchInfo() {
     btn.textContent = "Get Info";
   }
 }
-
+ 
 async function startDownload() {
   const url = document.getElementById("urlInput").value.trim();
   const format_id = document.getElementById("qualitySelect").value;
   const dlBtn = document.getElementById("dlBtn");
-
+ 
   dlBtn.disabled = true;
   dlBtn.textContent = "Starting download...";
-
+ 
   const progressWrap = document.getElementById("progressWrap");
   const progressFill = document.getElementById("progressFill");
   const progressText = document.getElementById("progressText");
-
+ 
   progressWrap.style.display = "block";
   progressFill.style.width = "20%";
   progressText.textContent = "Connecting to server...";
-
+ 
   try {
-    // For direct files or large files — redirect browser directly
     if (format_id === "direct" || (currentData && currentData.large_file && currentData.direct_url)) {
       const directUrl = currentData.direct_url || url;
       progressFill.style.width = "100%";
@@ -233,22 +256,22 @@ async function startDownload() {
       }, 2000);
       return;
     }
-
+ 
     progressFill.style.width = "40%";
     progressText.textContent = "Processing video...";
-
+ 
     const res = await fetch(`${API}/download`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({url: url, format_id: format_id})
+      body: JSON.stringify({url: url, format_id: format_id}),
+      signal: AbortSignal.timeout(120000)
     });
-
+ 
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(()=>({detail:"Download failed."}));
       throw new Error(err.detail || "Download failed.");
     }
-
-    // Check if server returned a redirect
+ 
     const contentType = res.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       const data = await res.json();
@@ -264,22 +287,19 @@ async function startDownload() {
         return;
       }
     }
-
-    // Stream the file as a download
+ 
     progressFill.style.width = "70%";
     progressText.textContent = "Downloading file...";
-
+ 
     const blob = await res.blob();
     progressFill.style.width = "100%";
     progressText.textContent = "Saving file...";
-
-    // Get filename from header
+ 
     const disposition = res.headers.get("content-disposition") || "";
     let filename = "zapload_video.mp4";
     const match = disposition.match(/filename="?([^"]+)"?/);
     if (match) filename = match[1];
-
-    // Trigger browser download
+ 
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
@@ -288,12 +308,10 @@ async function startDownload() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(blobUrl);
-
+ 
     progressText.textContent = "✅ Download complete!";
-    setTimeout(() => {
-      progressWrap.style.display = "none";
-    }, 3000);
-
+    setTimeout(() => { progressWrap.style.display = "none"; }, 3000);
+ 
   } catch(e) {
     const eb = document.getElementById("errorBox");
     eb.textContent = "❌ " + (e.message || "Download failed. Please try again.");
@@ -304,7 +322,7 @@ async function startDownload() {
     dlBtn.textContent = "⚡ Download Now";
   }
 }
-
+ 
 document.getElementById("urlInput").addEventListener("keypress", e => {
   if (e.key === "Enter") fetchInfo();
 });
