@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZapLoad — Platform Test Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0A0E1A;color:#fff;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:20px}
+.header{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #1a2040}
+.logo{font-size:24px;font-weight:900;background:linear-gradient(90deg,#00B4FF,#9B59FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.back{color:#8892b0;text-decoration:none;font-size:14px;margin-left:auto}
+.back:hover{color:#00B4FF}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.stat{background:#0d1326;border:1px solid #1a2040;border-radius:12px;padding:16px;text-align:center}
+.stat-label{font-size:12px;color:#8892b0;margin-bottom:6px}
+.stat-val{font-size:28px;font-weight:700}
+.green{color:#00ff88}
+.red{color:#ff4444}
+.gray{color:#8892b0}
+.blue{color:#00B4FF}
+.run-btn{width:100%;background:linear-gradient(90deg,#00B4FF,#9B59FF);border:none;border-radius:10px;padding:14px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:20px;transition:.3s}
+.run-btn:hover{opacity:.85}
+.run-btn:disabled{opacity:.5;cursor:not-allowed}
+.test-card{background:#0d1326;border:1px solid #1a2040;border-radius:12px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.platform-icon{font-size:24px;width:36px;text-align:center}
+.platform-name{font-size:15px;font-weight:600;flex:1}
+.status-badge{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600}
+.badge-pass{background:#0a2e1a;color:#00ff88;border:1px solid #00ff88}
+.badge-fail{background:#2e0a0a;color:#ff4444;border:1px solid #ff4444}
+.badge-loading{background:#1a1a2e;color:#8892b0;border:1px solid #8892b0}
+.badge-idle{background:#0d1326;color:#4a5580;border:1px solid #1a2040}
+.test-meta{font-size:12px;color:#8892b0;text-align:right;min-width:80px}
+.error-text{font-size:11px;color:#ff6666;margin-top:4px;max-width:200px;text-align:right;word-break:break-word}
+.formats-text{font-size:11px;color:#00B4FF;margin-top:2px}
+.custom-test{background:#0d1326;border:1px solid #1a2040;border-radius:12px;padding:20px;margin-bottom:20px}
+.custom-test h3{font-size:16px;margin-bottom:12px;color:#8892b0}
+.custom-input-row{display:flex;gap:10px}
+.custom-input{flex:1;background:#0A0E1A;border:2px solid #1a2040;border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;outline:none}
+.custom-input:focus{border-color:#00B4FF}
+.custom-btn{background:linear-gradient(90deg,#00B4FF,#9B59FF);border:none;border-radius:8px;padding:10px 20px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.custom-result{margin-top:12px;display:none;background:#0A0E1A;border-radius:8px;padding:12px;font-size:13px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #1a2040;border-top:2px solid #00B4FF;border-radius:50%;animation:spin 1s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar{background:#1a2040;border-radius:99px;height:4px;margin-top:16px;overflow:hidden}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#00B4FF,#9B59FF);border-radius:99px;transition:width .3s}
+.retest-btn{background:none;border:1px solid #1a2040;border-radius:6px;padding:4px 10px;color:#8892b0;font-size:11px;cursor:pointer;margin-left:8px}
+.retest-btn:hover{border-color:#00B4FF;color:#00B4FF}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="logo">⚡ ZapLoad</span>
+  <span style="color:#8892b0;font-size:14px;">Platform Test Dashboard</span>
+  <a href="/" class="back">← Back to downloader</a>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-label">Total Tests</div><div class="stat-val blue" id="statTotal">8</div></div>
+  <div class="stat"><div class="stat-label">Passing</div><div class="stat-val green" id="statPass">—</div></div>
+  <div class="stat"><div class="stat-label">Failing</div><div class="stat-val red" id="statFail">—</div></div>
+  <div class="stat"><div class="stat-label">Avg Speed</div><div class="stat-val gray" id="statAvg">—</div></div>
+</div>
+
+<button class="run-btn" id="runBtn" onclick="runAll()">⚡ Run All Tests</button>
+
+<div class="progress-bar"><div class="progress-fill" id="progressBar"></div></div>
+
+<div style="margin:16px 0" id="testList"></div>
+
+<div class="custom-test">
+  <h3>🔗 Test Custom URL</h3>
+  <div class="custom-input-row">
+    <input class="custom-input" id="customUrl" placeholder="Paste any video or file link here..." type="text">
+    <button class="custom-btn" onclick="testCustom()">Test</button>
+  </div>
+  <div class="custom-result" id="customResult"></div>
+</div>
+
+<p style="text-align:center;color:#4a5580;font-size:12px;margin-top:20px">
+  Backend: <a href="https://zapload-backend--sfarhanahmad982.replit.app" target="_blank" style="color:#00B4FF">zapload-backend--sfarhanahmad982.replit.app</a>
+</p>
+
+<script>
+const API = "https://zapload-backend--sfarhanahmad982.replit.app";
+
+const TESTS = [
+  {name:"YouTube",        icon:"📺", url:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
+  {name:"YouTube Shorts", icon:"📱", url:"https://www.youtube.com/shorts/9Qs1XTKNWM0"},
+  {name:"TikTok",         icon:"🎵", url:"https://www.tiktok.com/@khaby.lame/video/7022558930592543998"},
+  {name:"Instagram",      icon:"📸", url:"https://www.instagram.com/reel/CnCCYVkONtB/"},
+  {name:"Facebook",       icon:"👥", url:"https://www.facebook.com/watch/?v=10155123658476737"},
+  {name:"Twitter/X",      icon:"🐦", url:"https://twitter.com/NASA/status/1650913082460971008"},
+  {name:"Vimeo",          icon:"🎬", url:"https://vimeo.com/148751763"},
+  {name:"Direct MP4",     icon:"📁", url:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"},
+];
+
+let results = {};
+let running = false;
+
+function renderList() {
+  const list = document.getElementById("testList");
+  list.innerHTML = "";
+  TESTS.forEach((t, i) => {
+    const r = results[i];
+    let badge = `<span class="status-badge badge-idle">not tested</span>`;
+    let meta = "";
+    let extra = "";
+
+    if (r === "loading") {
+      badge = `<span class="status-badge badge-loading"><span class="spinner"></span>testing...</span>`;
+    } else if (r && r.ok) {
+      badge = `<span class="status-badge badge-pass">✅ working</span>`;
+      meta = `${r.ms}ms`;
+      extra = r.formats ? `<div class="formats-text">${r.formats} quality options found</div>` : "";
+    } else if (r && !r.ok) {
+      badge = `<span class="status-badge badge-fail">❌ failed</span>`;
+      meta = `${r.ms}ms`;
+      extra = `<div class="error-text">${r.error}</div>`;
+    }
+
+    list.innerHTML += `
+      <div class="test-card">
+        <div class="platform-icon">${t.icon}</div>
+        <div class="platform-name">${t.name}</div>
+        ${badge}
+        <button class="retest-btn" onclick="runSingle(${i})" ${running ? "disabled" : ""}>↺ retest</button>
+        <div style="text-align:right">
+          <div class="test-meta">${meta}</div>
+          ${extra}
+        </div>
+      </div>`;
+  });
+  updateStats();
+}
+
+function updateStats() {
+  const done = Object.values(results).filter(r => r && r !== "loading");
+  const pass = done.filter(r => r.ok).length;
+  const fail = done.filter(r => !r.ok).length;
+  const avg = done.length ? Math.round(done.reduce((s,r)=>s+r.ms,0)/done.length) : null;
+  document.getElementById("statPass").textContent = done.length ? pass : "—";
+  document.getElementById("statFail").textContent = done.length ? fail : "—";
+  document.getElementById("statAvg").textContent = avg ? avg+"ms" : "—";
+}
+
+async function testOne(i) {
+  results[i] = "loading";
+  renderList();
+  const start = Date.now();
+  try {
+    const res = await fetch(`${API}/info`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url: TESTS[i].url}),
+      signal: AbortSignal.timeout(30000)
+    });
+    const ms = Date.now() - start;
+    const data = await res.json();
+    if (!res.ok) {
+      results[i] = {ok:false, ms, error: data.detail || "HTTP "+res.status};
+    } else {
+      results[i] = {ok:true, ms, formats: data.formats ? data.formats.length : 0};
+    }
+  } catch(e) {
+    results[i] = {ok:false, ms: Date.now()-start, error: e.message || "Network error"};
+  }
+  renderList();
+}
+
+async function runSingle(i) {
+  await testOne(i);
+}
+
+async function runAll() {
+  if (running) return;
+  running = true;
+  results = {};
+  const btn = document.getElementById("runBtn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Running tests...";
+  renderList();
+
+  for (let i = 0; i < TESTS.length; i++) {
+    document.getElementById("progressBar").style.width = ((i/TESTS.length)*100)+"%";
+    await testOne(i);
+  }
+
+  document.getElementById("progressBar").style.width = "100%";
+  setTimeout(()=>document.getElementById("progressBar").style.width="0%", 2000);
+  btn.disabled = false;
+  btn.textContent = "🔄 Run Again";
+  running = false;
+}
+
+async function testCustom() {
+  const url = document.getElementById("customUrl").value.trim();
+  if (!url) { alert("Please paste a URL first!"); return; }
+  const result = document.getElementById("customResult");
+  result.style.display = "block";
+  result.innerHTML = `<span class="spinner"></span> Testing...`;
+  result.style.color = "#8892b0";
+  const start = Date.now();
+  try {
+    const res = await fetch(`${API}/info`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url}),
+      signal: AbortSignal.timeout(30000)
+    });
+    const ms = Date.now() - start;
+    const data = await res.json();
+    if (!res.ok) {
+      result.style.color = "#ff4444";
+      result.innerHTML = `❌ Failed (${ms}ms) — ${data.detail || "Unknown error"}`;
+    } else {
+      result.style.color = "#00ff88";
+      const fmts = data.formats ? data.formats.map(f=>f.label).join(", ") : "none";
+      result.innerHTML = `✅ Working! (${ms}ms)<br>Title: ${data.title || "Unknown"}<br>Formats: ${fmts}`;
+    }
+  } catch(e) {
+    result.style.color = "#ff4444";
+    result.innerHTML = `❌ Error — ${e.message || "Network error"}`;
+  }
+}
+
+document.getElementById("customUrl").addEventListener("keypress", e => {
+  if (e.key === "Enter") testCustom();
+});
+
+renderList();
+</script>
+</body>
+</html>
